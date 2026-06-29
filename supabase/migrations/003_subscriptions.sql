@@ -1,5 +1,5 @@
 -- Stripe subscription state per user
-create table public.subscriptions (
+create table if not exists public.subscriptions (
   user_id uuid primary key references auth.users(id) on delete cascade,
   stripe_customer_id text not null,
   stripe_subscription_id text,
@@ -10,11 +10,12 @@ create table public.subscriptions (
   updated_at timestamptz not null default now()
 );
 
-create index subscriptions_stripe_customer_id_idx on public.subscriptions(stripe_customer_id);
-create index subscriptions_stripe_subscription_id_idx on public.subscriptions(stripe_subscription_id);
+create index if not exists subscriptions_stripe_customer_id_idx on public.subscriptions(stripe_customer_id);
+create index if not exists subscriptions_stripe_subscription_id_idx on public.subscriptions(stripe_subscription_id);
 
 alter table public.subscriptions enable row level security;
 
+drop policy if exists "Users can view own subscription" on public.subscriptions;
 create policy "Users can view own subscription"
   on public.subscriptions for select
   using (auth.uid() = user_id);

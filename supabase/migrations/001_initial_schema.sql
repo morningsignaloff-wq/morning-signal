@@ -1,5 +1,5 @@
 -- KPI entries submitted by users
-create table public.kpi_entries (
+create table if not exists public.kpi_entries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   revenue numeric not null,
@@ -11,7 +11,7 @@ create table public.kpi_entries (
 );
 
 -- AI-generated reports
-create table public.reports (
+create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   kpi_entry_id uuid not null references public.kpi_entries(id) on delete cascade,
@@ -23,26 +23,30 @@ create table public.reports (
   created_at timestamptz not null default now()
 );
 
-create index kpi_entries_user_id_idx on public.kpi_entries(user_id);
-create index kpi_entries_created_at_idx on public.kpi_entries(created_at desc);
-create index reports_user_id_idx on public.reports(user_id);
-create index reports_created_at_idx on public.reports(created_at desc);
+create index if not exists kpi_entries_user_id_idx on public.kpi_entries(user_id);
+create index if not exists kpi_entries_created_at_idx on public.kpi_entries(created_at desc);
+create index if not exists reports_user_id_idx on public.reports(user_id);
+create index if not exists reports_created_at_idx on public.reports(created_at desc);
 
 alter table public.kpi_entries enable row level security;
 alter table public.reports enable row level security;
 
+drop policy if exists "Users can view own kpi entries" on public.kpi_entries;
 create policy "Users can view own kpi entries"
   on public.kpi_entries for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own kpi entries" on public.kpi_entries;
 create policy "Users can insert own kpi entries"
   on public.kpi_entries for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can view own reports" on public.reports;
 create policy "Users can view own reports"
   on public.reports for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert own reports" on public.reports;
 create policy "Users can insert own reports"
   on public.reports for insert
   with check (auth.uid() = user_id);

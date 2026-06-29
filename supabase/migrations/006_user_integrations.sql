@@ -1,5 +1,5 @@
 -- User-connected data sources (credentials via service role only)
-create table public.user_integrations (
+create table if not exists public.user_integrations (
   user_id uuid not null references auth.users(id) on delete cascade,
   provider text not null check (provider in ('stripe')),
   secret_key text not null,
@@ -8,7 +8,7 @@ create table public.user_integrations (
   primary key (user_id, provider)
 );
 
-create index user_integrations_user_id_idx on public.user_integrations(user_id);
+create index if not exists user_integrations_user_id_idx on public.user_integrations(user_id);
 
 alter table public.user_integrations enable row level security;
 
