@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendDailyReportEmail } from "@/lib/email";
+import { isProStatus } from "@/lib/stripe";
+import { hasMorningEmail } from "@/lib/plans";
 import type { GeneratedReport } from "@/lib/types";
+import type { PlanId } from "@/lib/plans";
 
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
@@ -22,6 +25,20 @@ export async function GET(request: Request) {
   for (const user of users.users) {
     if (!user.email) continue;
 
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("plan, status")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    const plan = (sub?.plan ?? "free") as PlanId;
+    const active = sub && isProStatus(sub.status);
+
+    if (!active || !hasMorningEmail(plan)) {
+      results.push({ email: user.email, status: "skipped — free plan" });
+      continue;
+    }
+
     const { data: reports } = await supabase
       .from("reports")
       .select("*")
@@ -36,6 +53,7 @@ export async function GET(request: Request) {
 
     const report = reports[0];
     const reportData: GeneratedReport = {
+      priority_insights: report.priority_insights ?? [],
       business_overview: report.business_overview,
       key_trends: report.key_trends,
       risks_alerts: report.risks_alerts,
@@ -45,7 +63,7 @@ export async function GET(request: Request) {
 
     try {
       await sendDailyReportEmail(user.email, reportData);
-      results.push({ email: user.email, status: "sent" });
+      results.push({ email: user.email, status: `sent (${plan})` });
     } catch {
       results.push({ email: user.email, status: "failed" });
     }

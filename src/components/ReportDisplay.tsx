@@ -1,4 +1,5 @@
 import type { Report } from "@/lib/types";
+import { formatInsightLine, normalizeInsights } from "@/lib/insights";
 
 interface ReportDisplayProps {
   report: Report;
@@ -67,12 +68,14 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
     day: "numeric",
   });
 
+  const insights = normalizeInsights(report.priority_insights);
+
   return (
     <div className="space-y-5 animate-fade-up">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium mb-1">
-            Rapport du jour
+            Signaux du matin
           </p>
           <h2 className="text-xl font-medium text-zinc-900 capitalize">{date}</h2>
         </div>
@@ -83,48 +86,81 @@ export function ReportDisplay({ report }: ReportDisplayProps) {
         </div>
       </div>
 
-      <div className="grid gap-3">
-        {sections.map(({ key, title, border, dot, iconBg, iconColor, icon }) => (
-          <div
-            key={key}
-            className={`report-section-card p-5 border-l-4 ${border}`}
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center ${iconColor}`}>
-                {icon}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-                <h3 className="text-sm font-medium text-zinc-800">{title}</h3>
-              </div>
-            </div>
-            <p className="text-zinc-600 leading-relaxed text-sm pl-11">
-              {report[key]}
-            </p>
-          </div>
-        ))}
-
+      {insights.length > 0 && (
         <div className="dashboard-panel p-5">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-8 h-8 rounded-lg bg-white border border-violet-200 flex items-center justify-center text-violet-600">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-sm font-semibold text-violet-900">Plan d&apos;action du jour</h3>
-          </div>
-          <ol className="space-y-3">
-            {report.daily_actions.map((action, i) => (
-              <li key={i} className="flex gap-3 items-start">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-900 text-white text-xs font-bold flex items-center justify-center mt-0.5">
-                  {i + 1}
-                </span>
-                <span className="text-sm text-zinc-700 leading-relaxed">{action}</span>
+          <p className="text-xs font-medium text-violet-800 uppercase tracking-wide mb-4">
+            {insights.length} insights prioritaires
+          </p>
+          <ul className="space-y-3">
+            {insights.map((insight, i) => (
+              <li
+                key={i}
+                className="text-sm text-zinc-800 leading-relaxed border-b border-violet-100 last:border-0 pb-3 last:pb-0"
+              >
+                {formatInsightLine(insight)}
               </li>
             ))}
-          </ol>
+          </ul>
         </div>
-      </div>
+      )}
+
+      <details className="group">
+        <summary className="text-xs font-medium text-zinc-500 uppercase tracking-wide cursor-pointer list-none flex items-center gap-2 hover:text-zinc-700">
+          <svg
+            className="w-4 h-4 transition-transform group-open:rotate-90"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+          Analyse détaillée
+        </summary>
+
+        <div className="grid gap-3 mt-4">
+          {sections.map(({ key, title, border, dot, iconBg, iconColor, icon }) => (
+            <div
+              key={key}
+              className={`report-section-card p-5 border-l-4 ${border}`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center ${iconColor}`}>
+                  {icon}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                  <h3 className="text-sm font-medium text-zinc-800">{title}</h3>
+                </div>
+              </div>
+              <p className="text-zinc-600 leading-relaxed text-sm pl-11">
+                {report[key]}
+              </p>
+            </div>
+          ))}
+
+          <div className="dashboard-panel p-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-white border border-violet-200 flex items-center justify-center text-violet-600">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-sm font-semibold text-violet-900">Plan d&apos;action du jour</h3>
+            </div>
+            <ol className="space-y-3">
+              {report.daily_actions.map((action, i) => (
+                <li key={i} className="flex gap-3 items-start">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-zinc-900 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                    {i + 1}
+                  </span>
+                  <span className="text-sm text-zinc-700 leading-relaxed">{action}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </details>
     </div>
   );
 }

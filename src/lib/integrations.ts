@@ -3,7 +3,7 @@ export interface Integration {
   name: string;
   description: string;
   category: "revenue" | "ads" | "analytics";
-  status: "coming_soon";
+  status: "available" | "coming_soon";
 }
 
 export const integrations: Integration[] = [
@@ -12,7 +12,7 @@ export const integrations: Integration[] = [
     name: "Stripe",
     description: "Revenu, MRR, nouveaux clients et churn — synchronisation automatique.",
     category: "revenue",
-    status: "coming_soon",
+    status: "available",
   },
   {
     id: "google-ads",
@@ -67,7 +67,7 @@ export const comingSoonProFeatures = [
   "Support prioritaire",
 ];
 
-export const PRO_PRICE = 9.99;
+export { PRO_PRICE, GROWTH_PRICE } from "@/lib/plans";
 
 // Legacy aliases — à retirer quand Pro sera live
 export const freeFeatures = earlyAccessFeatures;

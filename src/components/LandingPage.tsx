@@ -5,19 +5,15 @@ import { Logo } from "@/components/Logo";
 import { MarketingLayout } from "@/components/MarketingLayout";
 import { IntegrationsGrid } from "@/components/IntegrationsGrid";
 import { PricingSection } from "@/components/PricingSection";
+import { FeedbackSection } from "@/components/FeedbackSection";
 import { Reveal } from "@/components/Reveal";
 import { ScrollStory } from "@/components/ScrollStory";
 import { SkyBackground } from "@/components/SkyBackground";
 import { useLanguage } from "@/lib/i18n/context";
-import { PRO_PRICE } from "@/lib/integrations";
 import { BRAND_NAME } from "@/lib/brand";
 
 export function LandingPage() {
-  const { t, locale } = useLanguage();
-  const proPrice =
-    locale === "fr"
-      ? `${PRO_PRICE.toFixed(2).replace(".", ",")}€`
-      : `€${PRO_PRICE.toFixed(2)}`;
+  const { t } = useLanguage();
 
   return (
     <MarketingLayout>
@@ -98,12 +94,12 @@ export function LandingPage() {
             </div>
           </Reveal>
           <Reveal delay={120}>
-            <IntegrationsGrid variant="marketing" />
+            <IntegrationsGrid variant="marketing" plan="pro" />
           </Reveal>
         </div>
       </section>
 
-      <PricingSection proPrice={proPrice} />
+      <PricingSection />
 
       {/* ── Final CTA ── */}
       <section className="marketing-divider marketing-tint-violet">
@@ -140,10 +136,12 @@ export function LandingPage() {
         </div>
       </section>
 
+      <FeedbackSection />
+
       <footer className="marketing-divider">
         <div className="max-w-5xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Logo variant="light" size="sm" />
-          <p className="text-xs text-zinc-500">
+          <Logo variant="dark" size="sm" />
+          <p className="text-xs text-white/70">
             © {new Date().getFullYear()} {BRAND_NAME}. {t.footer}
           </p>
         </div>

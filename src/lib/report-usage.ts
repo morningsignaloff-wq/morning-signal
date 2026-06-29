@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { FREE_REPORT_LIMIT, getCurrentMonthKey } from "@/lib/usage";
+import { isPaidUser } from "@/lib/subscription-db";
 
 export async function getReportUsage(userId: string): Promise<number> {
   const supabase = await createClient();
@@ -35,6 +36,10 @@ export async function incrementReportUsage(userId: string): Promise<void> {
 }
 
 export async function assertCanGenerateReport(userId: string): Promise<void> {
+  if (await isPaidUser(userId)) {
+    return;
+  }
+
   const used = await getReportUsage(userId);
   if (used >= FREE_REPORT_LIMIT) {
     throw new Error(

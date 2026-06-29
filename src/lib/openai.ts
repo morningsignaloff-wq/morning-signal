@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import type { GeneratedReport, KPIInput } from "./types";
+import { normalizeInsights } from "@/lib/insights";
 import { SYSTEM_PROMPT, buildUserPrompt } from "./prompt";
 
 function getOpenAI() {
@@ -30,9 +31,11 @@ export async function generateReport(
     throw new Error("No response from OpenAI");
   }
 
-  const parsed = JSON.parse(content) as GeneratedReport;
+  const parsed = JSON.parse(content) as GeneratedReport & { priority_insights?: unknown };
+  const priority_insights = normalizeInsights(parsed.priority_insights);
 
   if (
+    priority_insights.length < 3 ||
     !parsed.business_overview ||
     !parsed.key_trends ||
     !parsed.risks_alerts ||
@@ -43,5 +46,9 @@ export async function generateReport(
     throw new Error("Invalid report structure from OpenAI");
   }
 
-  return parsed;
+  return {
+    ...parsed,
+    priority_insights,
+    daily_actions: parsed.daily_actions as [string, string, string],
+  };
 }

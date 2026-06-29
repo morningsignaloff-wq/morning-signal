@@ -1,3 +1,10 @@
+export type PriorityInsightType = "growth" | "warning" | "alert" | "tip";
+
+export interface PriorityInsight {
+  type: PriorityInsightType;
+  text: string;
+}
+
 export interface KPIInput {
   revenue: number;
   new_users: number;
@@ -7,6 +14,7 @@ export interface KPIInput {
 }
 
 export interface GeneratedReport {
+  priority_insights: PriorityInsight[];
   business_overview: string;
   key_trends: string;
   risks_alerts: string;

@@ -24,7 +24,7 @@ export function Logo({ size = "md", variant = "light", showText = true, showMark
       {showMark && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src="/morning-signal-mark.png"
+          src="/morning-signal-mark.svg"
           alt={BRAND_NAME}
           width={width}
           height={height}

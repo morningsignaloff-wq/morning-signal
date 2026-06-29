@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { KPIForm } from "@/components/KPIForm";
 import { ReportDisplay } from "@/components/ReportDisplay";
 import { LocalModeBadge } from "@/components/LocalModeBadge";
@@ -8,7 +9,7 @@ import { EarlyAccessBadge } from "@/components/EarlyAccessBadge";
 import { Logo } from "@/components/Logo";
 import { MarketingLayout } from "@/components/MarketingLayout";
 import { IntegrationsGrid } from "@/components/IntegrationsGrid";
-import { WaitlistButton } from "@/components/WaitlistButton";
+import { SubscribeButton, ManageSubscriptionButton } from "@/components/SubscribeButton";
 import type { Report } from "@/lib/types";
 import { useRouter } from "next/navigation";
 import { isLocalMode } from "@/lib/mode";
@@ -16,6 +17,9 @@ import { getSession, signOut as localSignOut } from "@/lib/local/auth";
 import { getLatestReport, getReports, getReportCountThisMonth } from "@/lib/local/store";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_REPORT_LIMIT } from "@/lib/usage";
+import { PRO_PRICE, GROWTH_PRICE } from "@/lib/plans";
+import type { PlanId } from "@/lib/plans";
+import { StripeConnectCard } from "@/components/StripeConnectCard";
 
 type Tab = "rapport" | "integrations";
 
@@ -32,27 +36,87 @@ function formatReportLabel(dateStr: string) {
 export default function DashboardPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
-  const [usage, setUsage] = useState({ used: 0, limit: FREE_REPORT_LIMIT });
+  const [usage, setUsage] = useState<{
+    used: number;
+    limit: number | null;
+    isPaid: boolean;
+    plan: PlanId;
+    morningEmail: boolean;
+    stripeConnected: boolean;
+    connectedProviders: string[];
+    connectorLimit: number | null;
+  }>({
+    used: 0,
+    limit: FREE_REPORT_LIMIT,
+    isPaid: false,
+    plan: "free",
+    morningEmail: false,
+    stripeConnected: false,
+    connectedProviders: [],
+    connectorLimit: 0,
+  });
+  const [upgradeNotice, setUpgradeNotice] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("rapport");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const local = isLocalMode();
+
+  const startCheckout = useCallback(async (plan: "pro" | "growth" = "pro") => {
+    const res = await fetch("/api/stripe/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+    const data = await res.json();
+    if (res.ok && data.url) {
+      window.location.href = data.url;
+      return;
+    }
+    alert(data.error ?? "Impossible de lancer le paiement Stripe.");
+  }, []);
 
   function refreshUsageLocal(userId: string) {
     setUsage({
       used: getReportCountThisMonth(userId),
       limit: FREE_REPORT_LIMIT,
+      isPaid: false,
+      plan: "free",
+      morningEmail: false,
+      stripeConnected: false,
+      connectedProviders: [],
+      connectorLimit: 0,
     });
   }
 
   async function refreshUsageProd() {
-    const res = await fetch("/api/report-usage");
+    const res = await fetch("/api/subscription");
     if (res.ok) {
       const data = await res.json();
-      setUsage({ used: data.used, limit: data.limit });
+      setUsage({
+        used: data.used,
+        limit: data.limit,
+        isPaid: data.isPaid,
+        plan: data.plan,
+        morningEmail: data.morningEmail,
+        stripeConnected: data.stripeConnected,
+        connectedProviders: data.connectedProviders ?? [],
+        connectorLimit: data.connectorLimit ?? 0,
+      });
     }
   }
+
+  useEffect(() => {
+    const upgraded = searchParams.get("upgraded");
+    if (upgraded === "pro" || upgraded === "growth") {
+      setUpgradeNotice(
+        upgraded === "growth"
+          ? "Plan Growth activé — tous les connecteurs + email matinal."
+          : "Plan Pro activé — 1 connecteur au choix + email matinal + rapports illimités."
+      );
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     async function load() {
@@ -131,7 +195,14 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between gap-4">
           <Logo variant="light" size="sm" />
           <div className="flex items-center gap-3 sm:gap-4">
-            <EarlyAccessBadge variant="dashboard" label="Accès anticipé — intégrations à venir" />
+            {usage.isPaid ? (
+              <span className="text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 px-3 py-1.5 rounded-full">
+                Plan {usage.plan === "growth" ? "Growth" : "Pro"}
+                {usage.morningEmail && " · Email matinal"}
+              </span>
+            ) : (
+              <EarlyAccessBadge variant="dashboard" label="Plan gratuit" />
+            )}
             {email && (
               <span className="text-xs text-zinc-500 hidden sm:block">{email}</span>
             )}
@@ -149,6 +220,30 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="mb-8 animate-fade-up">
             {local && <LocalModeBadge />}
+            {upgradeNotice && (
+              <div className="mb-4 text-sm text-violet-800 bg-violet-50 border border-violet-200 rounded-xl px-4 py-3">
+                {upgradeNotice}
+              </div>
+            )}
+            {!usage.isPaid && usage.limit != null && usage.used >= usage.limit && (
+              <div className="mb-4 dashboard-panel-rose p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="font-medium text-zinc-900">Limite gratuite atteinte</p>
+                  <p className="text-sm text-zinc-600 mt-1">
+                    Pro {PRO_PRICE}€/mois (1 connecteur au choix) ou Growth {GROWTH_PRICE}€/mois (tous connecteurs).
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                  <SubscribeButton plan="pro" className="btn-marketing justify-center !rounded-xl text-sm" label="Pro" />
+                  <SubscribeButton plan="growth" className="btn-marketing-outline justify-center !rounded-xl text-sm" label="Growth" />
+                </div>
+              </div>
+            )}
+            {usage.isPaid && (
+              <div className="mb-4 flex justify-end">
+                <ManageSubscriptionButton className="btn-marketing-outline !rounded-xl text-xs px-4 py-2" />
+              </div>
+            )}
             <h1 className="text-2xl font-medium text-zinc-900 mt-4 tracking-tight">
               Votre{" "}
               <span className="serif-italic">dashboard</span>
@@ -191,7 +286,8 @@ export default function DashboardPage() {
                     setReport(r);
                     setReports((prev) => [r, ...prev.filter((x) => x.id !== r.id)]);
                   }}
-                  usage={usage}
+                  usage={{ ...usage, isPro: usage.isPaid }}
+                  onUpgrade={() => startCheckout("pro")}
                   onUsageChange={() => {
                     if (local) {
                       const session = getSession();
@@ -247,20 +343,29 @@ export default function DashboardPage() {
 
           {tab === "integrations" && (
             <div className="animate-fade-up space-y-8">
-              <div className="dashboard-panel-rose p-6">
-                <p className="text-zinc-900 font-medium">Intégrations en développement</p>
-                <p className="text-sm text-zinc-600 mt-2 max-w-2xl">
-                  Stripe, Google Ads, Meta, Google Analytics et Shopify seront disponibles
-                  avec le plan Pro. En attendant, utilisez la saisie manuelle dans l&apos;onglet Rapport.
-                </p>
-                <div className="mt-4 max-w-xs">
-                  <WaitlistButton
-                    className="btn-marketing w-full justify-center !rounded-xl"
-                    label="M'avertir quand c'est prêt"
-                  />
+              <StripeConnectCard
+                connected={usage.stripeConnected}
+                canConnect={usage.plan === "pro" || usage.plan === "growth"}
+                onStatusChange={refreshUsageProd}
+              />
+              {usage.plan === "free" && (
+                <div className="dashboard-panel-rose p-6">
+                  <p className="text-zinc-900 font-medium">Connecteurs réservés aux abonnés</p>
+                  <p className="text-sm text-zinc-600 mt-2 max-w-2xl">
+                    Le plan Pro inclut 1 connecteur au choix + email matinal ({PRO_PRICE}€/mois).
+                    Le plan Growth débloque tous les connecteurs ({GROWTH_PRICE}€/mois).
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2 max-w-md">
+                    <SubscribeButton plan="pro" className="btn-marketing justify-center !rounded-xl flex-1" label={`Pro — ${PRO_PRICE}€/mois`} />
+                    <SubscribeButton plan="growth" className="btn-marketing-outline justify-center !rounded-xl flex-1" label={`Growth — ${GROWTH_PRICE}€/mois`} />
+                  </div>
                 </div>
-              </div>
-              <IntegrationsGrid variant="dashboard" />
+              )}
+              <IntegrationsGrid
+                variant="dashboard"
+                plan={usage.plan}
+                connectedProviders={usage.connectedProviders}
+              />
             </div>
           )}
         </div>

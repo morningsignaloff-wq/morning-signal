@@ -102,7 +102,28 @@ export function ScrollStory() {
                   {s.kicker}
                 </span>
                 <h2 className="cine-heading mt-7">
-                  {s.title} <span className="serif-italic">{s.titleItalic}</span>
+                  {"titleLines" in s && s.titleLines ? (
+                    <>
+                      {s.titleLines.map((line, j) => (
+                        <span
+                          key={j}
+                          className={line.italic ? "serif-italic block" : "block"}
+                        >
+                          {line.text}
+                          {"emphasis" in line && line.emphasis ? (
+                            <span className="serif-italic cine-heading-emphasis">
+                              {line.emphasis}
+                            </span>
+                          ) : null}
+                        </span>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {s.title}{" "}
+                      <span className="serif-italic">{s.titleItalic}</span>
+                    </>
+                  )}
                 </h2>
                 <p className="cine-subtitle mt-6 max-w-xl">{s.text}</p>
                 {i === scenes.length - 1 && (

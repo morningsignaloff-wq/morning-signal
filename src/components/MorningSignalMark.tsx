@@ -10,7 +10,7 @@ export function MorningSignalMark({ size = 80, className = "" }: MorningSignalMa
 
   return (
     <Image
-      src="/morning-signal-mark.png"
+      src="/morning-signal-mark.svg"
       alt=""
       width={size}
       height={height}

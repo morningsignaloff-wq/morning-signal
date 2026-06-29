@@ -5,6 +5,11 @@ import {
   assertCanGenerateReport,
   incrementReportUsage,
 } from "@/lib/report-usage";
+import { fetchStripeKPIs } from "@/lib/connectors/stripe";
+import {
+  getStripeSecretKey,
+  userCanUseConnector,
+} from "@/lib/subscription-db";
 import type { KPIInput } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -26,11 +31,36 @@ export async function POST(request: Request) {
 
   const body = (await request.json()) as KPIInput;
 
+  let kpiInput: KPIInput = { ...body };
+
+  const canStripe = await userCanUseConnector(user.id, "stripe");
+  if (canStripe) {
+    const stripeKey = await getStripeSecretKey(user.id);
+    if (stripeKey) {
+      try {
+        const stripeData = await fetchStripeKPIs(stripeKey);
+        kpiInput = {
+          ...kpiInput,
+          revenue: stripeData.revenue || kpiInput.revenue,
+          new_users: stripeData.new_customers || kpiInput.new_users,
+          notes: [
+            kpiInput.notes,
+            `[Stripe sync] Revenu 30j: ${stripeData.revenue}€, ${stripeData.new_customers} nouveaux clients.`,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        };
+      } catch {
+        // Continue with manual KPIs if Stripe fetch fails
+      }
+    }
+  }
+
   if (
-    body.revenue == null ||
-    body.new_users == null ||
-    body.conversion_rate == null ||
-    body.ad_spend == null
+    kpiInput.revenue == null ||
+    kpiInput.new_users == null ||
+    kpiInput.conversion_rate == null ||
+    kpiInput.ad_spend == null
   ) {
     return NextResponse.json(
       { error: "Missing required KPI fields" },
@@ -51,11 +81,11 @@ export async function POST(request: Request) {
     .from("kpi_entries")
     .insert({
       user_id: user.id,
-      revenue: body.revenue,
-      new_users: body.new_users,
-      conversion_rate: body.conversion_rate,
-      ad_spend: body.ad_spend,
-      notes: body.notes ?? null,
+      revenue: kpiInput.revenue,
+      new_users: kpiInput.new_users,
+      conversion_rate: kpiInput.conversion_rate,
+      ad_spend: kpiInput.ad_spend,
+      notes: kpiInput.notes ?? null,
     })
     .select()
     .single();
@@ -65,13 +95,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const report = await generateReport(body, previousKpi);
+    const report = await generateReport(kpiInput, previousKpi);
 
     const { data: savedReport, error: reportError } = await supabase
       .from("reports")
       .insert({
         user_id: user.id,
         kpi_entry_id: kpiEntry.id,
+        priority_insights: report.priority_insights,
         business_overview: report.business_overview,
         key_trends: report.key_trends,
         risks_alerts: report.risks_alerts,

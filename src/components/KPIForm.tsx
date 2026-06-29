@@ -15,8 +15,9 @@ import { FREE_REPORT_LIMIT } from "@/lib/usage";
 
 interface KPIFormProps {
   onReportGenerated: (report: Report) => void;
-  usage?: { used: number; limit: number };
+  usage?: { used: number; limit: number | null; isPro?: boolean };
   onUsageChange?: () => void;
+  onUpgrade?: () => void;
 }
 
 const fields = [
@@ -70,6 +71,7 @@ export function KPIForm({
   onReportGenerated,
   usage,
   onUsageChange,
+  onUpgrade,
 }: KPIFormProps) {
   const [form, setForm] = useState<KPIInput>({
     revenue: 0,
@@ -142,10 +144,21 @@ export function KPIForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       {usage && (
         <p className="text-xs text-zinc-500">
-          Plan gratuit —{" "}
-          <span className="font-medium text-zinc-700">
-            {usage.used}/{usage.limit} rapports ce mois-ci
-          </span>
+          {usage.isPro ? (
+            <>
+              Plan <span className="font-medium text-violet-700">Pro</span> — rapports illimités
+              {usage.used > 0 && (
+                <span className="text-zinc-400"> · {usage.used} ce mois-ci</span>
+              )}
+            </>
+          ) : (
+            <>
+              Plan gratuit —{" "}
+              <span className="font-medium text-zinc-700">
+                {usage.used}/{usage.limit} rapports ce mois-ci
+              </span>
+            </>
+          )}
         </p>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -178,24 +191,35 @@ export function KPIForm({
 
       <div>
         <label htmlFor="notes" className="block text-xs font-medium text-zinc-500 mb-2 uppercase tracking-wide">
-          Notes <span className="text-zinc-400 normal-case">(optionnel)</span>
+          Contexte canaux <span className="text-zinc-400 normal-case">(optionnel)</span>
         </label>
         <textarea
           id="notes"
           rows={2}
           value={form.notes ?? ""}
           onChange={(e) => updateField("notes", e.target.value)}
-          placeholder="Nouvelle landing page lancée, Google Ads en pause..."
+          placeholder="Meta 400€, Google Ads 300€, chute conversion page Pricing..."
           className="input-marketing resize-none"
         />
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          {error}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+            <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {error}
+          </div>
+          {error.includes("Limite atteinte") && onUpgrade && (
+            <button
+              type="button"
+              onClick={onUpgrade}
+              className="w-full btn-marketing justify-center !rounded-xl text-sm"
+            >
+              Passer Pro — rapports illimités
+            </button>
+          )}
         </div>
       )}
 

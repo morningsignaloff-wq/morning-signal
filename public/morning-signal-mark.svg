@@ -1,0 +1,17 @@
+<svg viewBox="0 0 160 60" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <defs>
+    <linearGradient id="ms-sun" x1="28" y1="42" x2="28" y2="10" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f97316"/>
+      <stop offset="1" stop-color="#facc15"/>
+    </linearGradient>
+    <linearGradient id="ms-signal" x1="12" y1="30" x2="152" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+  <g stroke="url(#ms-sun)" stroke-width="3" stroke-linecap="round">
+    <path d="M28 8V13M16.5 12.5L19.8 16.2M39.5 12.5L36.2 16.2M11 22H15.5M41 22H45.5"/>
+  </g>
+  <path d="M12 42C12 28.64 19.16 18 28 18C36.84 18 44 28.64 44 42H12Z" fill="url(#ms-sun)"/>
+  <path d="M12 42H44C52 42 54 48 60 48C66 48 68 18 80 18C92 18 94 42 102 42H152" stroke="url(#ms-signal)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
