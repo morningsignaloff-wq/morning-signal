@@ -105,10 +105,7 @@ export function ScrollStory() {
                   {"titleLines" in s && s.titleLines ? (
                     <>
                       {s.titleLines.map((line, j) => (
-                        <span
-                          key={j}
-                          className={line.italic ? "serif-italic block" : "block"}
-                        >
+                        <span key={j} className="block">
                           {line.text}
                           {"emphasis" in line && line.emphasis ? (
                             <span className="serif-italic cine-heading-emphasis">
